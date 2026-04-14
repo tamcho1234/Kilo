@@ -112,6 +112,7 @@ int getCursorPosition(int *rows, int *cols)
 }
 
 int getWindowSize(int *rows, int *cols) {
+
     struct winsize ws;
 
     if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) //ioctl just gets the window size, and if it fails or returns 0 columns, we will use an alternative method to get the window size.
@@ -126,31 +127,47 @@ int getWindowSize(int *rows, int *cols) {
         return 0;
     }
 }
+
+void abAppend(struct abuf *ab, const char *s, int len) {
+    char *new = realloc(ab->b, ab->len + len);
+    if(new == NULL) return;
+    memcpy(&new[ab->len], s, len);
+    ab->b = new;
+    ab->len += len;
+}   
+
+void abFree(struct abuf *ab) {
+    free(ab->b);
+}
+
 /*** output ***/
-void editorDrawRows() {
+void editorDrawRows(struct abuf *ab) {
     // This function would typically draw the rows of text in the editor,
     // but for simplicity, we will skip the implementation.
     int y; 
     for (y = 0; y < E.screenrows; y++)
     {
-        write(STDOUT_FILENO, "~", 1);
+        abAppend(ab, "~", 1);
 
+        abAppend(ab, "\x1b[K", 3); // clear the line from the cursor to the end of the line]")
         if(y < E.screenrows - 1) {
-            write(STDOUT_FILENO, "\r\n", 2);
+            abAppend(ab, "\r\n", 2);
         }
     }
-
 }
 
 void editorRefreshScreen() {
     // This function would typically clear the screen and redraw the editor's interface,
     // but for simplicity, we will skip the implementation.
-    write(STDOUT_FILENO, "\x1b[2J", 4); // clear the screen
-    write(STDOUT_FILENO, "\x1b[H", 3); // move the cursor to the top-left corner
+    struct abuf ab = ABUF_INIT;
 
-    editorDrawRows();
 
-    write(STDOUT_FILENO, "\x1b[H", 3); // move the cursor to the top-left corner
+    abAppend(&ab, "\x1b[H", 3); // move the cursor to the top-left corner
+    editorDrawRows(&ab);
+
+    abAppend(&ab, "\x1b[H", 3); // move the cursor to the top-left corner
+    write(STDOUT_FILENO, ab.b, ab.len);
+    abFree(&ab);
 }
 
 /*** input ***/
@@ -169,6 +186,7 @@ int main(void) {
     initEditor();
     while(1)
     {
+
         editorRefreshScreen();
         editorProcessKeypress();
     }
