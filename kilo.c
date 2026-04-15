@@ -217,7 +217,7 @@ void editorMoveCursor(int key) {
             if(row && E.cx < row->size) {
                 E.cx++;
             }
-            if(row && E.cx == row->size && E.cy < E.numrows - 1) {
+            else if(row && E.cx == row->size && E.cy < E.numrows - 1) {
                 E.cy++;
                 E.cx = 0;
             }
